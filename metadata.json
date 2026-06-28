@@ -1,0 +1,6 @@
+{
+  "name": "WinZO Card Duel",
+  "description": "An immersive 1v1 card-picking tournament. Players match up, put stakes from their balance, and pick one of three mysterious cards. Pick the winning card to claim 1.5x of the total prize pool, while the other loses!",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

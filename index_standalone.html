@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinZO Arcade - Standalone Playable Edition</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red: '#E11D48',
+              crimson: '#BE123C',
+              dark: '#090D16',
+              card: '#111827',
+              border: '#1F2937',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- React 18 & Babel CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #050810;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Elegant Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090e17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #dc2626;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #f43f5e;
+    }
+
+    /* Glow Effects */
+    .glow-brand {
+      box-shadow: 0 0 20px rgba(225, 29, 72, 0.25);
+    }
+    .glow-green {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+    .glow-gold {
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.3);
+    }
+  </style>
+</head>
+<body class="text-slate-250 min-h-screen">
+
+  <!-- Main Mounting Point for React -->
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // sound synthesizer built on Web Audio API
+    class SoundManager {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      initCtx() {
+        if (!this.ctx && typeof window !== 'undefined') {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+      }
+
+      toggleSound() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+      }
+
+      playWhoosh() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.15);
+        } catch (e) {}
+      }
+
+      playThud() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.1);
+        } catch (e) {}
+      }
+
+      playCoin() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc1.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+          osc1.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
+          osc2.frequency.setValueAtTime(1174.66, this.ctx.currentTime);
+          osc2.frequency.setValueAtTime(1567.98, this.ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc1.start();
+          osc2.start();
+          osc1.stop(this.ctx.currentTime + 0.35);
+          osc2.stop(this.ctx.currentTime + 0.35);
+        } catch (e) {}
+      }
+
+      playSpin() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.04);
+        } catch (e) {}
+      }
+
+      playWin() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, index) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.08);
+            gain.gain.setValueAtTime(0.15, this.ctx.currentTime + index * 0.08);
+            gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.08 + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + index * 0.08);
+            osc.stop(this.ctx.currentTime + index * 0.08 + 0.25);
+          });
+        } catch (e) {}
+      }
+
+      playLose() {
+        if (!this.enabled) return;
+        this.initCtx();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.6);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.6);
+        } catch (e) {}
+      }
+    }
+
+    const audio = new SoundManager();
+
+    // Default setups
+    const INITIAL_PROFILE = {
+      name: 'Sarvesh Kadam',
+      avatar: '🦊',
+      coins: 99999999999999999, // default starting infinite coins for Sarvesh
+      xp: 120,
+      level: 4,
+      wins: 14,
+      losses: 5,
+      matchesPlayed: 19,
+      lastDailySpin: null,
+      matchHistory: [
+        { id: 'h1', gameId: 'card-duel', opponentName: 'Rahul Sen', opponentAvatar: '🦁', win: true, coinsEarned: 50, entryFee: 25, timestamp: new Date(Date.now() - 3600000).toISOString() },
+        { id: 'h2', gameId: 'ludo', opponentName: 'Priya Patel', opponentAvatar: '🐨', win: false, coinsEarned: -50, entryFee: 50, timestamp: new Date(Date.now() - 3600000*4).toISOString() }
+      ]
+    };
+
+    const INITIAL_QUESTS = [
+      { id: 'q1', title: 'Golden Dueler', description: 'Complete three 1v1 Card Duels.', reward: 1500, progress: 1, target: 3, completed: false, claimed: false },
+      { id: 'q2', title: 'Ludo Conqueror', description: 'Win one Speed Ludo Match.', reward: 2500, progress: 0, target: 1, completed: false, claimed: false, gameId: 'ludo' },
+      { id: 'q3', title: 'Rummy Champion', description: 'Declare a winning Rummy hand.', reward: 5000, progress: 0, target: 1, completed: false, claimed: false, gameId: 'rummy' },
+    ];
+
+    const INITIAL_LEADERBOARD = [
+      { rank: 1, name: 'Ananya Rao', avatar: '🐼', coins: 1450000, level: 25 },
+      { rank: 2, name: 'Rohit Kumar', avatar: '🦁', coins: 920000, level: 18 },
+      { rank: 3, name: 'Sarvesh Kadam', avatar: '🦊', coins: 99999999999999999, level: 4, isUser: true },
+      { rank: 4, name: 'Kabir Malik', avatar: '🐯', coins: 41000, level: 11 },
+      { rank: 5, name: 'Megha Singh', avatar: '🐱', coins: 28000, level: 8 }
+    ];
+
+    const CHALLENGE_TIERS = [
+      { id: 't1', fee: 10, pool: 18, label: 'Arcade Rookie' },
+      { id: 't2', fee: 50, pool: 90, label: 'Pro Challenger' },
+      { id: 't3', fee: 200, pool: 360, label: 'Grand Master Stakes' },
+      { id: 't4', fee: 1000, pool: 1800, label: 'Elite Arena Duel' }
+    ];
+
+    const GAME_CATALOG = [
+      {
+        id: 'card-duel',
+        title: 'Card Duel Double',
+        desc: 'Fast-paced 1v1 card memorization & picking duel. Collect the Gold Card!',
+        avatar: '🎴',
+        banner: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80&w=400',
+        activePlayers: 489,
+        bgGradient: 'from-rose-600 to-rose-900 border-rose-500/30'
+      },
+      {
+        id: 'ludo',
+        title: 'Speed 1v1 Ludo',
+        desc: 'Advanced Ludo racing board. Capture stars, slice rival pieces, reach HOME first!',
+        avatar: '🎲',
+        banner: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&q=80&w=400',
+        activePlayers: 812,
+        bgGradient: 'from-amber-600 to-amber-950 border-amber-500/30'
+      },
+      {
+        id: 'rummy',
+        title: 'Speed Rummy Pro',
+        desc: 'Speed sequencing card simulation. Draw, discard, group, and declare!',
+        avatar: '🃏',
+        banner: 'https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&q=80&w=400',
+        activePlayers: 342,
+        bgGradient: 'from-blue-600 to-blue-900 border-blue-500/30'
+      },
+      {
+        id: 'spin-wheel',
+        title: 'Daily Wheel Spin',
+        desc: 'Spin once every 24 hours to win free gold cash and high rewards!',
+        avatar: '🎡',
+        banner: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=400',
+        activePlayers: 1542,
+        bgGradient: 'from-violet-600 to-violet-900 border-violet-500/30'
+      }
+    ];
+
+    // ==========================================
+    // SELECTION OF SUB-COMPONENTS
+    // ==========================================
+
+    // SpinWheel Component
+    function SpinWheel({ onWin, onClose, lastDailySpin }) {
+      const [rotation, setRotation] = useState(0);
+      const [isSpinning, setIsSpinning] = useState(false);
+      const [spinReward, setSpinReward] = useState(null);
+      const [hasSpun, setHasSpun] = useState(false);
+
+      const sectors = [
+        { value: 100, label: '100 Gold', color: '#1e293b' },
+        { value: 500, label: '500 Gold', color: '#fbbf24' },
+        { value: 1000, label: '1,000 Gold', color: '#0284c7' },
+        { value: 50000, label: 'JACKPOT 🔥', color: '#dc2626' },
+        { value: 200, label: '200 Gold', color: '#1e293b' },
+        { value: 10000, label: '10K Bounty', color: '#10b981' },
+        { value: 500, label: '500 Gold', color: '#ca8a04' },
+        { value: 100000, label: 'MEGA JACKPOT', color: '#8b5cf6' },
+      ];
+
+      const spin = () => {
+        if (isSpinning || hasSpun) return;
+        setIsSpinning(true);
+        audio.playCoin();
+
+        const wonIdx = Math.floor(Math.random() * sectors.length);
+        const sectorDeg = 360 / sectors.length;
+        const initialSpins = 360 * 6; // 6 spins
+        const sectorOffset = 360 - (wonIdx * sectorDeg) - (sectorDeg / 2);
+        const finalAngle = rotation + initialSpins + sectorOffset;
+
+        let currentAngle = rotation;
+        const totalRot = finalAngle - rotation;
+        const startTime = performance.now();
+        const duration = 4000;
+
+        const animate = (now) => {
+          const elapsed = now - startTime;
+          if (elapsed >= duration) {
+            setRotation(finalAngle);
+            setIsSpinning(false);
+            setHasSpun(true);
+            setSpinReward(sectors[wonIdx]);
+            audio.playWin();
+            onWin(sectors[wonIdx].value);
+            return;
+          }
+
+          const t = elapsed / duration;
+          const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+          const nextAngle = rotation + totalRot * ease;
+
+          if (Math.floor(nextAngle / sectorDeg) > Math.floor(currentAngle / sectorDeg)) {
+            audio.playSpin();
+          }
+
+          currentAngle = nextAngle;
+          setRotation(nextAngle);
+          requestAnimationFrame(animate);
+        };
+
+        requestAnimationFrame(animate);
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-brand-card border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center relative overflow-hidden glow-gold">
+            <h2 className="text-2xl font-black text-amber-400 mb-2 tracking-tight">DAILY SPIN WHEEL</h2>
+            <p className="text-slate-400 text-xs mb-6 font-medium">Claim your daily fortune! Touch center play button to rotate!</p>
+
+            {/* Wheel Canvas Container */}
+            <div className="relative w-72 h-72 mx-auto mb-6 flex items-center justify-center">
+              {/* Outer Pointer */}
+              <div className="absolute top-0 z-10 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-rose-500"></div>
+              
+              {/* Spinning Plate */}
+              <div 
+                className="w-full h-full rounded-full border-8 border-slate-800 shadow-2xl relative overflow-hidden transition-transform duration-100 ease-out"
+                style={{ 
+                  transform: `rotate(${rotation}deg)`,
+                  background: 'radial-gradient(circle, #0f172a 20%, #020617 100%)'
+                }}
+              >
+                {sectors.map((sec, idx) => {
+                  const deg = 360 / sectors.length;
+                  const rot = idx * deg;
+                  return (
+                    <div 
+                      key={idx}
+                      className="absolute top-0 right-0 left-0 bottom-0 origin-center text-[10px] font-black pointer-events-none select-none text-white pt-2 text-center"
+                      style={{
+                        transform: `rotate(${rot}deg)`,
+                        clipPath: 'polygon(50% 50%, 30% 0, 70% 0)'
+                      }}
+                    >
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
+                        <span className="text-sm">🪙</span>
+                        <span className="font-mono" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                          {sec.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Spin Button Node Center */}
+              <button 
+                onClick={spin}
+                disabled={isSpinning || hasSpun}
+                className={`absolute w-16 h-16 rounded-full font-black text-xs text-slate-950 flex items-center justify-center active:scale-95 transition-transform border-4 border-slate-950 focus:outline-none ${
+                  hasSpun 
+                    ? 'bg-slate-700 text-slate-300' 
+                    : 'bg-amber-400 hover:bg-amber-300 glow-gold cursor-pointer'
+                }`}
+              >
+                {isSpinning ? '...' : hasSpun ? 'DONE' : 'SPIN'}
+              </button>
+            </div>
+
+            {spinReward && (
+              <div className="bg-amber-400/10 border border-amber-400/20 text-amber-300 rounded-xl p-3 mb-6 animate-bounce">
+                <span className="font-bold">CONGRATULATIONS!</span>
+                <p className="text-sm font-black mt-1">You won {spinReward.label}!</p>
+              </div>
+            )}
+
+            <button 
+              onClick={onClose}
+              disabled={isSpinning}
+              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl cursor-pointer w-full transition-colors"
+            >
+              Go back to Lobby
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Matchmaking Screen Simulation
+    function Matchmaking({ gameId, tier, lobbyCategory, opponent, onStartGame, onCancel }) {
+      const [countdown, setCountdown] = useState(3);
+      const [step, setStep] = useState('searching'); // 'searching' | 'found' | 'ready'
+      const [loadingPct, setLoadingPct] = useState(0);
+
+      useEffect(() => {
+        audio.playWhoosh();
+        // Step 1: Simulate searching loading bar
+        const intervalId = setInterval(() => {
+          setLoadingPct((prev) => {
+            if (prev >= 100) {
+              clearInterval(intervalId);
+              setStep('found');
+              return 100;
+            }
+            return prev + Math.floor(Math.random() * 15) + 5;
+          });
+        }, 150);
+
+        return () => clearInterval(intervalId);
+      }, []);
+
+      useEffect(() => {
+        if (step !== 'found') return;
+        audio.playCoin();
+        
+        // Count down to start
+        const cdInterval = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(cdInterval);
+              onStartGame();
+              return 0;
+            }
+            audio.playThud();
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(cdInterval);
+      }, [step]);
+
+      const gameDetails = GAME_CATALOG.find(g => g.id === gameId);
+
+      return (
+        <div className="fixed inset-0 bg-slate-950/95 z-40 flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-brand-card border border-white/5 p-8 rounded-3xl relative overflow-hidden glow-brand">
+            <span className="text-rose-500 font-mono tracking-widest text-[10px] uppercase font-black bg-rose-500/10 px-3 py-1 rounded-full">
+              WinZO ARENA 1v1 MATCHMAKING
+            </span>
+            <h2 className="text-xl font-bold text-white mt-4">{gameDetails?.title}</h2>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-mono">Entry: 🪙{tier.fee} Coins | Reward Pool: 🪙{tier.pool} Coins</p>
+
+            {/* Duelists Visual representation */}
+            <div className="flex items-center justify-between mt-8 p-4 bg-black/40 rounded-2xl border border-white/5 relative">
+              
+              {/* Player */}
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-5xl mb-2 animate-pulse">🦊</span>
+                <span className="text-sm font-black text-white truncate max-w-[120px]">You</span>
+                <span className="text-[10px] text-emerald-400 font-mono">LEVEL 4</span>
+              </div>
+
+              {/* VS separator */}
+              <div className="text-slate-500 font-black text-xl italic px-4">
+                {step === 'found' ? (
+                  <span className="text-rose-500 text-2xl font-black animate-bounce">VS</span>
+                ) : 'Searching'}
+              </div>
+
+              {/* Opponent */}
+              <div className="flex flex-col items-center flex-1">
+                {step === 'found' ? (
+                  <>
+                    <span className="text-5xl mb-2">🐼</span>
+                    <span className="text-sm font-black text-white truncate max-w-[120px]">{opponent.name}</span>
+                    <span className="text-[10px] text-amber-400 font-mono">LEVEL 14</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-5xl mb-2 animate-bounce">❓</span>
+                    <span className="text-xs text-slate-500 italic">Matching Rival...</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Loading Bar or Countdown */}
+            <div className="mt-8">
+              {step === 'searching' ? (
+                <>
+                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-3">
+                    <div className="bg-rose-600 h-full transition-all duration-150 ease-out" style={{ width: `${loadingPct}%` }}></div>
+                  </div>
+                  <p className="text-xs text-slate-500 italic">Matching with verified players online...</p>
+                  <button 
+                    onClick={onCancel}
+                    className="mt-6 bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold text-xs py-2 px-6 rounded-xl border border-white/5 active:scale-95 transition-transform"
+                  >
+                    Cancel Matchmaking
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <span className="text-5xl font-black text-rose-500 animate-ping block">{countdown}</span>
+                  <p className="text-sm font-bold text-green-400">RIVAL DETECTED! Preparing Table...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Card Duel Components
+    function CardDuel({ opponentName, opponentAvatar, entryFee, prizePool, onGameOver }) {
+      const [cards, setCards] = useState([
+        { id: 1, type: 'winner', isFlipped: false, selectedBy: null },
+        { id: 2, type: 'loser', isFlipped: false, selectedBy: null },
+        { id: 3, type: 'loser', isFlipped: false, selectedBy: null },
+      ]);
+      const [stage, setStage] = useState('ready'); // 'ready'|'preview'|'shuffling'|'player-pick'|'reveal'|'finished'
+      const [status, setStatus] = useState('Welcome! Press Start to memorize the winning card and spin!');
+      const [timer, setTimer] = useState(3);
+      const [selectedCardId, setSelectedCardId] = useState(null);
+
+      const startDuel = () => {
+        audio.playWhoosh();
+        setCards(cards.map(c => ({ ...c, isFlipped: true, selectedBy: null })));
+        setStage('preview');
+        setStatus('MEMORIZE THE CHAMPION (GOLDEN CARD)!');
+        setTimer(3);
+      };
+
+      useEffect(() => {
+        if (stage !== 'preview') return;
+        const interval = setInterval(() => {
+          setTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              startShuffling();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [stage]);
+
+      const startShuffling = () => {
+        setStage('shuffling');
+        setStatus('Shuffling card decks...');
+        setCards(cards.map(c => ({ ...c, isFlipped: false })));
+
+        let counter = 0;
+        const shuffleInt = setInterval(() => {
+          audio.playSpin();
+          setCards((prev) => {
+            const next = [...prev];
+            const i1 = Math.floor(Math.random() * 3);
+            let i2 = Math.floor(Math.random() * 3);
+            while (i2 === i1) i2 = Math.floor(Math.random() * 3);
+            const temp = next[i1];
+            next[i1] = next[i2];
+            next[i2] = temp;
+            return next;
+          });
+          counter++;
+          if (counter >= 6) {
+            clearInterval(shuffleInt);
+            setStage('player-pick');
+            setStatus('YOUR TURN: Select the Golden Card!');
+          }
+        }, 300);
+      };
+
+      const selectCard = (id) => {
+        if (stage !== 'player-pick') return;
+        audio.playThud();
+        setSelectedCardId(id);
+        
+        let targetOpponentChoice = null;
+        setCards((prev) => {
+          const updated = prev.map(c => c.id === id ? { ...c, selectedBy: 'player' } : c);
+          const remaining = updated.filter(c => c.selectedBy === null);
+          const randomIdx = Math.floor(Math.random() * remaining.length);
+          if (remaining[randomIdx]) {
+            targetOpponentChoice = remaining[randomIdx].id;
+          }
+          return updated.map(c => c.id === targetOpponentChoice ? { ...c, selectedBy: 'opponent' } : c);
+        });
+
+        setStage('reveal');
+        setStatus('Cards Locked! Revealing results in 2 seconds...');
+
+        setTimeout(() => {
+          setCards(prev => prev.map(c => ({ ...c, isFlipped: true })));
+          setStage('finished');
+          
+          const playerSelectedCard = cards.find(c => c.id === id);
+          if (playerSelectedCard.type === 'winner') {
+            audio.playWin();
+            setStatus('VICTORY! You picked the GOLD CARD correctly!');
+          } else {
+            audio.playLose();
+            setStatus('DEFEAETED! You selected a dummy loser card.');
+          }
+        }, 1800);
+      };
+
+      const completeMatch = () => {
+        const picked = cards.find(c => c.id === selectedCardId);
+        const playerWon = picked?.type === 'winner';
+        const userScore = playerWon ? 1 : 0;
+        const oppScore = playerWon ? 0 : 1;
+        onGameOver(userScore, oppScore, playerWon);
+      };
+
+      return (
+        <div className="max-w-xl mx-auto p-4 bg-brand-card border border-white/5 rounded-3xl glow-brand mt-4 text-center">
+          <div className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5 mb-6">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🦊</span>
+              <span className="text-xs font-bold text-white uppercase font-mono">You (Lvl 4)</span>
+            </div>
+            <div className="text-xs font-black text-rose-500 uppercase font-mono px-3 py-1 bg-rose-500/10 rounded-full">
+              CARD DUEL 1v1
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white uppercase font-mono">{opponentName}</span>
+              <span className="text-2xl">{opponentAvatar}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-amber-400 font-bold mb-1 uppercase tracking-widest font-mono">STATUS UPDATES</p>
+          <div className="bg-black/30 p-2 rounded-xl text-xs text-white max-w-sm mx-auto mb-6 font-medium">
+            {stage === 'preview' ? `${status} (Closing in ${timer}s...)` : status}
+          </div>
+
+          {/* Cards Table */}
+          <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto min-h-[160px] items-center mb-8">
+            {cards.map((card, idx) => {
+              return (
+                <div 
+                  key={card.id}
+                  onClick={() => selectCard(card.id)}
+                  className={`aspect-[2/3] text-center rounded-2xl relative select-none flex flex-col items-center justify-center border-2 transition-all duration-300 transform active:scale-95 ${
+                    stage === 'player-pick' ? 'hover:-translate-y-2 cursor-pointer scale-100 glow-brand hover:border-rose-400' : ''
+                  } ${
+                    card.isFlipped 
+                      ? card.type === 'winner' 
+                        ? 'bg-amber-400 text-slate-900 border-amber-300' 
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                      : 'bg-gradient-to-br from-rose-700 to-rose-950 text-white border-rose-500/40'
+                  }`}
+                  style={{
+                    boxShadow: card.isFlipped && card.type === 'winner' ? '0 0 15px rgba(251, 191, 36, 0.5)' : ''
+                  }}
+                >
+                  {/* Selected badges */}
+                  {card.selectedBy === 'player' && (
+                    <span className="absolute top-1 left-1 bg-blue-600 text-white font-black text-[7px] px-1.5 py-0.5 rounded uppercase leading-none font-mono tracking-widest z-10">YOU</span>
+                  )}
+                  {card.selectedBy === 'opponent' && (
+                    <span className="absolute top-1 right-1 bg-amber-600 text-slate-950 font-black text-[7px] px-1.5 py-0.5 rounded uppercase leading-none font-mono tracking-widest z-10">OPP</span>
+                  )}
+
+                  {card.isFlipped ? (
+                    <div className="text-center font-black">
+                      <span className="text-3xl block">{card.type === 'winner' ? '⭐' : '💀'}</span>
+                      <span className="text-[10px] mt-1 uppercase block font-mono">{card.type === 'winner' ? 'GOLDEN' : 'DUMMY'}</span>
+                    </div>
+                  ) : (
+                    <div className="text-center font-black">
+                      <span className="text-3xl block">👑</span>
+                      <span className="text-[8px] opacity-40 uppercase tracking-widest font-mono">WINZO</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            {stage === 'ready' && (
+              <button 
+                onClick={startDuel}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-8 py-3 rounded-xl cursor-pointer shadow-lg active:scale-95 transition-all w-full max-w-xs"
+              >
+                🚀 START DUEL MATCH
+              </button>
+            )}
+
+            {stage === 'finished' && (
+              <button 
+                onClick={completeMatch}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-8 py-3 rounded-xl cursor-pointer shadow-lg active:scale-95 transition-all w-full max-w-xs"
+              >
+                CLAIM VICTORY CREDITS
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Ludo Mini component in Standalone HTML
+    function Ludo({ opponentName, opponentAvatar, entryFee, prizePool, onGameOver }) {
+      const [diceVal, setDiceVal] = useState(6);
+      const [rolling, setRolling] = useState(false);
+      const [turn, setTurn] = useState('player'); // 'player' | 'opponent'
+      const [pWins, setPWins] = useState(0);
+      const [oWins, setOWins] = useState(0);
+      const [scoreMsg, setScoreMsg] = useState('First to slice or reach HOME with high dice rolls wins the board!');
+      const [pCoins, setPCoins] = useState(1);
+      const [oCoins, setOCoins] = useState(1);
+
+      const rollDice = () => {
+        if (rolling || turn !== 'player') return;
+        setRolling(true);
+        audio.playSpin();
+
+        let times = 0;
+        const int = setInterval(() => {
+          setDiceVal(Math.floor(Math.random() * 6) + 1);
+          times++;
+          if (times >= 8) {
+            clearInterval(int);
+            setRolling(false);
+            const val = Math.floor(Math.random() * 6) + 1;
+            setDiceVal(val);
+            
+            // Advance pawn simulation
+            setPCoins(prev => {
+              const next = prev + val;
+              if (next >= 15) {
+                audio.playWin();
+                setPWins(p => p + 1);
+                setScoreMsg('YOUR PAWN REACHED HOME! Incredible speedrun!');
+                return 15;
+              }
+              audio.playThud();
+              setScoreMsg(`Advancing Red pawn by ${val} blocks.`);
+              return next;
+            });
+
+            // Trigger Opponent pick
+            setTurn('opponent');
+            setTimeout(() => {
+              triggerOpponentRoll();
+            }, 1200);
+          }
+        }, 100);
+      };
+
+      const triggerOpponentRoll = () => {
+        audio.playSpin();
+        const diceValOpp = Math.floor(Math.random() * 6) + 1;
+        setDiceVal(diceValOpp);
+
+        setOCoins(prev => {
+          const next = prev + diceValOpp;
+          if (next >= 15) {
+            audio.playLose();
+            setOWins(o => o + 1);
+            setScoreMsg(`Rival Pawn reached HOME via ${diceValOpp} roll!`);
+            return 15;
+          }
+          audio.playWhoosh();
+          setScoreMsg(`Rival ${opponentName} advanced Green pawn by ${diceValOpp} blocks.`);
+          return next;
+        });
+
+        setTurn('player');
+      };
+
+      const userScore = pWins;
+      const opponentScore = oWins;
+      const gameFinished = pWins >= 2 || oWins >= 2 || pCoins >= 15 || oCoins >= 15;
+
+      const triggerGameOverResult = () => {
+        onGameOver(pCoins, oCoins, pCoins >= oCoins);
+      };
+
+      return (
+        <div className="max-w-xl mx-auto p-4 bg-brand-card border border-white/5 rounded-3xl glow-brand mt-4">
+          <div className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5 mb-6">
+            <span className="font-bold text-xs uppercase font-mono text-emerald-400">🎲 Speed Ludo 1v1</span>
+            <span className="text-slate-400 font-medium text-xs">Pawn Path Racer</span>
+          </div>
+
+          <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 text-center text-xs text-white">
+            {scoreMsg}
+          </div>
+
+          {/* Path Race visualization */}
+          <div className="bg-black/40 p-4 rounded-xl border border-white/5 space-y-4 mb-6">
+            {/* Player red path */}
+            <div>
+              <div className="flex justify-between text-[11px] mb-1 font-mono text-rose-400">
+                <span>🔴 Your Red Pawn: Block {pCoins}/15</span>
+                {pCoins >= 15 && <span className="text-green-400 tracking-wider font-extrabold uppercase animate-pulse">HOME!</span>}
+              </div>
+              <div className="w-full bg-slate-900 border border-slate-700 h-6 rounded-lg relative overflow-hidden flex items-center px-1">
+                <div className="bg-rose-600/30 h-full rounded-md transition-all duration-300" style={{ width: `${(pCoins/15)*100}%` }}></div>
+                <span className="absolute text-sm font-bold transition-all duration-300" style={{ left: `calc(${Math.min((pCoins/15)*100, 92)}% - 4px)` }}>🔴</span>
+              </div>
+            </div>
+
+            {/* Opponent green path */}
+            <div>
+              <div className="flex justify-between text-[11px] mb-1 font-mono text-emerald-400">
+                <span>🟢 {opponentName}'s Green Pawn: Block {oCoins}/15</span>
+                {oCoins >= 15 && <span className="text-green-400 tracking-wider font-extrabold uppercase animate-pulse">HOME!</span>}
+              </div>
+              <div className="w-full bg-slate-900 border border-slate-700 h-6 rounded-lg relative overflow-hidden flex items-center px-1">
+                <div className="bg-emerald-600/30 h-full rounded-md transition-all duration-300" style={{ width: `${(oCoins/15)*100}%` }}></div>
+                <span className="absolute text-sm font-bold transition-all duration-300" style={{ left: `calc(${Math.min((oCoins/15)*100, 92)}% - 4px)` }}>🟢</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Dice Block Selector */}
+          <div className="text-center p-4 bg-black/50 border border-white/5 rounded-2xl max-w-sm mx-auto mb-6">
+            <span className="text-[10px] uppercase font-mono tracking-widest text-[#94a3b8] block mb-2">
+              {turn === 'player' ? 'YOUR ROLL' : `${opponentName.toUpperCase()}'S TURN`}
+            </span>
+            
+            {/* Roll Dice Box */}
+            <div 
+              onClick={rollDice}
+              className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center font-black text-2xl border-2 active:scale-90 transition-transform ${
+                rolling ? 'animate-spin bg-amber-500 border-amber-300' : 'bg-slate-800 border-slate-600 hover:border-slate-400 cursor-pointer text-white'
+              }`}
+            >
+              {diceVal}
+            </div>
+
+            <p className="text-[10px] text-slate-400 mt-2">
+              {rolling ? 'Sifting numbers...' : turn === 'player' ? 'Touch local dice block above to roll!' : 'Waiting for rival CPU...'}
+            </p>
+          </div>
+
+          <div className="text-center">
+            {gameFinished ? (
+              <button 
+                onClick={triggerGameOverResult}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs active:scale-95 transition-transform cursor-pointer"
+              >
+                SUBMIT BOARD VERDICT
+              </button>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    // Speed Rummy Game Simulation
+    function SpeedRummy({ opponentName, opponentAvatar, entryFee, prizePool, onGameOver }) {
+      const [cards, setCards] = useState([
+        { id: 'r1', value: 'A♣️', suit: 'clubs', grouped: false },
+        { id: 'r2', value: '2♣️', suit: 'clubs', grouped: false },
+        { id: 'r3', value: '3♣️', suit: 'clubs', grouped: false },
+        { id: 'r4', value: 'K♦️', suit: 'diamonds', grouped: false },
+        { id: 'r5', value: '10♥️', suit: 'hearts', grouped: false }
+      ]);
+      const [hasDeclared, setHasDeclared] = useState(false);
+      const [seqSuccess, setSeqSuccess] = useState(false);
+      const [status, setStatus] = useState('Sort the Spade sequence or declare to beat rival sequence!');
+
+      const toggleSortGroup = (id) => {
+        audio.playThud();
+        setCards(prev => prev.map(c => {
+          if (c.id === id) {
+            return { ...c, grouped: !c.grouped };
+          }
+          return c;
+        }));
+      };
+
+      const handleDrawCard = () => {
+        audio.playWhoosh();
+        setCards(prev => {
+          if (prev.length >= 6) return prev;
+          return [...prev, { id: 'r6', value: '4♣️', suit: 'clubs', grouped: false }];
+        });
+        setStatus('Drew a club card! Try making an Ace-2-3-4 clubs sequence sequence!');
+      };
+
+      const handleDeclare = () => {
+        audio.playCoin();
+        const filteredClubs = cards.filter(c => c.suit === 'clubs');
+        
+        setHasDeclared(true);
+        if (filteredClubs.length >= 4) {
+          audio.playWin();
+          setSeqSuccess(true);
+          setStatus('CONGRATULATIONS SEQUENCE ESTABLISHED! DECLARATION ACCEPTED!');
+        } else {
+          audio.playLose();
+          setSeqSuccess(false);
+          setStatus('FAILED DECLARATION! You hold too many loose unconnected cards.');
+        }
+      };
+
+      return (
+        <div className="max-w-xl mx-auto p-4 bg-brand-card border border-white/5 rounded-3xl glow-brand mt-4 text-center">
+          <div className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5 mb-6">
+            <span className="font-bold text-xs uppercase font-mono text-emerald-400">🃏 Speed Rummy Pro</span>
+            <span className="text-slate-400 font-medium text-xs">Meld & Declare Sequence</span>
+          </div>
+
+          <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 text-center text-xs text-white">
+            {status}
+          </div>
+
+          {/* Cards Deck Container */}
+          <div className="flex gap-2.5 justify-center overflow-x-auto p-4 mb-6">
+            {cards.map(c => {
+              return (
+                <div 
+                  key={c.id}
+                  onClick={() => toggleSortGroup(c.id)}
+                  className={`w-14 h-20 rounded-xl relative select-none flex flex-col items-center justify-center border-2 cursor-pointer transition-all ${
+                    c.grouped 
+                      ? 'bg-emerald-950 border-emerald-400 -translate-y-2 text-emerald-200' 
+                      : 'bg-slate-800 border-slate-700 hover:border-slate-500 text-white'
+                  }`}
+                >
+                  <span className="font-extrabold text-sm">{c.value}</span>
+                  <span className="text-[7px] uppercase font-mono mt-1 opacity-50">{c.grouped ? 'MELDED' : 'SORT'}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-2 justify-center max-w-sm mx-auto mb-6">
+            <button 
+              onClick={handleDrawCard}
+              disabled={cards.length >= 6 || hasDeclared}
+              className="bg-slate-850 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-white/10 flex-1 active:scale-95 transition-transform"
+            >
+              🃏 Draw a card
+            </button>
+            <button 
+              onClick={handleDeclare}
+              disabled={hasDeclared}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl flex-1 active:scale-95 transition-transform"
+            >
+              🔥 Declare Sequence
+            </button>
+          </div>
+
+          {hasDeclared && (
+            <div className="mt-4">
+              <button 
+                onClick={() => onGameOver(seqSuccess ? 100 : 20, seqSuccess ? 20 : 100, seqSuccess)}
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-6 py-2 rounded-xl transition-all"
+              >
+                Claim Rummy Verdict
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MAIN APP ENTRY COMPONENT
+    // ==========================================
+    function App() {
+      // General profile stats hydrated with localStorage if present
+      const [profile, setProfile] = useState(() => {
+        const local = localStorage.getItem('winzo_standalone_profile');
+        return local ? JSON.parse(local) : INITIAL_PROFILE;
+      });
+
+      const [quests, setQuests] = useState(() => {
+        const local = localStorage.getItem('winzo_standalone_quests');
+        return local ? JSON.parse(local) : INITIAL_QUESTS;
+      });
+
+      const [leaderboard, setLeaderboard] = useState(() => {
+        const local = localStorage.getItem('winzo_standalone_leaderboard');
+        return local ? JSON.parse(local) : INITIAL_LEADERBOARD;
+      });
+
+      const [transactionRequests, setTransactionRequests] = useState(() => {
+        const local = localStorage.getItem('winzo_standalone_transactions');
+        return local ? JSON.parse(local) : [];
+      });
+
+      const [soundEnabled, setSoundEnabled] = useState(true);
+      const [currentView, setCurrentView] = useState('lobby'); // 'lobby' | 'matchmaking' | 'playing' | 'spin-wheel' | 'selecting-tier'
+      
+      const [activeGameId, setActiveGameId] = useState(null);
+      const [selectedTier, setSelectedTier] = useState(null);
+      const [activeMatchOpponent, setActiveMatchOpponent] = useState(null);
+
+      // Deposit / Withdraw variables
+      const [isDepositOpen, setIsDepositOpen] = useState(false);
+      const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+      const [depositAmt, setDepositAmt] = useState(100);
+      const [withdrawAmt, setWithdrawAmt] = useState(50);
+      const [withdrawAddress, setWithdrawAddress] = useState('');
+      const [withdrawPlatform, setWithdrawPlatform] = useState('upi');
+
+      // Update LocalStorage whenever states alter
+      useEffect(() => {
+        localStorage.setItem('winzo_standalone_profile', JSON.stringify(profile));
+      }, [profile]);
+
+      useEffect(() => {
+        localStorage.setItem('winzo_standalone_quests', JSON.stringify(quests));
+      }, [quests]);
+
+      useEffect(() => {
+        localStorage.setItem('winzo_standalone_leaderboard', JSON.stringify(leaderboard));
+      }, [leaderboard]);
+
+      useEffect(() => {
+        localStorage.setItem('winzo_standalone_transactions', JSON.stringify(transactionRequests));
+      }, [transactionRequests]);
+
+      const toggleSound = () => {
+        const next = audio.toggleSound();
+        setSoundEnabled(next);
+      };
+
+      const selectGame = (gameId) => {
+        audio.playThud();
+        setActiveGameId(gameId);
+        
+        if (gameId === 'spin-wheel') {
+          setCurrentView('spin-wheel');
+        } else {
+          setCurrentView('selecting-tier');
+        }
+      };
+
+      const selectTier = (tier) => {
+        audio.playCoin();
+        setSelectedTier(tier);
+
+        // Deduct entry fee
+        if (profile.coins < tier.fee) {
+          alert('Insufficient coins! Open Deposit Panel from top right header to get coins.');
+          return;
+        }
+
+        // Subtract cost from account
+        setProfile(prev => ({
+          ...prev,
+          coins: prev.coins - tier.fee,
+          matchesPlayed: prev.matchesPlayed + 1
+        }));
+
+        // Pick opponent avatar
+        const opponents = [
+          { name: 'Aditya Sen', avatar: '🐱' },
+          { name: 'Rohit Kumar', avatar: '🦁' },
+          { name: 'Priyah Patel', avatar: '🐨' },
+          { name: 'Megha Singh', avatar: '🐼' },
+          { name: 'Kabir Malik', avatar: '🐯' },
+        ];
+        const randomOpp = opponents[Math.floor(Math.random() * opponents.length)];
+        setActiveMatchOpponent(randomOpp);
+
+        setCurrentView('matchmaking');
+      };
+
+      const handleGameFinished = (userScore, opponentScore, win) => {
+        audio.playCoin();
+        
+        let rewardAmount = 0;
+        if (win && selectedTier) {
+          rewardAmount = selectedTier.pool;
+        }
+
+        setProfile(prev => {
+          const updatedCoins = prev.coins + rewardAmount;
+          const updatedWins = win ? prev.wins + 1 : prev.wins;
+          const updatedLosses = win ? prev.losses : prev.losses + 1;
+          const updatedXp = prev.xp + 25;
+          const updatedLevel = Math.floor(updatedXp / 100) + 1;
+
+          // Push into history logs
+          const historyRow = {
+            id: 'h_' + Date.now(),
+            gameId: activeGameId,
+            opponentName: activeMatchOpponent.name,
+            opponentAvatar: activeMatchOpponent.avatar,
+            win: win,
+            coinsEarned: win ? selectedTier.pool - selectedTier.fee : -selectedTier.fee,
+            entryFee: selectedTier.fee,
+            timestamp: new Date().toISOString()
+          };
+
+          return {
+            ...prev,
+            coins: updatedCoins,
+            wins: updatedWins,
+            losses: updatedLosses,
+            xp: updatedXp,
+            level: updatedLevel,
+            matchHistory: [historyRow, ...prev.matchHistory]
+          };
+        });
+
+        // Update Quest progression
+        setQuests(prevQuests => 
+          prevQuests.map(q => {
+            if (activeGameId === 'card-duel' && q.id === 'q1') {
+              const currentProgress = Math.min(q.progress + 1, q.target);
+              return { ...q, progress: currentProgress, completed: currentProgress >= q.target };
+            }
+            if (activeGameId === 'ludo' && q.id === 'q2' && win) {
+              const currentProgress = Math.min(q.progress + 1, q.target);
+              return { ...q, progress: currentProgress, completed: currentProgress >= q.target };
+            }
+            if (activeGameId === 'rummy' && q.id === 'q3' && win) {
+              const currentProgress = Math.min(q.progress + 1, q.target);
+              return { ...q, progress: currentProgress, completed: currentProgress >= q.target };
+            }
+            return q;
+          })
+        );
+
+        setCurrentView('lobby');
+      };
+
+      // Daily quests rewards claim trigger
+      const claimQuestReward = (id, prizeVal) => {
+        audio.playWin();
+        setProfile(prev => ({
+          ...prev,
+          coins: prev.coins + prizeVal
+        }));
+        setQuests(prev => prev.map(q => q.id === id ? { ...q, claimed: true } : q));
+      };
+
+      // Spin Wheel winnings claimer
+      const handleSpinWheelWin = (coinsWon) => {
+        setProfile(prev => ({
+          ...prev,
+          coins: prev.coins + coinsWon
+        }));
+      };
+
+      // Deposits Trigger logic
+      const processDeposit = () => {
+        audio.playWin();
+        setProfile(prev => ({
+          ...prev,
+          coins: prev.coins + Number(depositAmt)
+        }));
+        setIsDepositOpen(false);
+      };
+
+      // Withdraw Trigger simulation
+      const submitWithdrawRequest = () => {
+        if (withdrawAmt > profile.coins) {
+          alert('Incorrect amount! Over-limit of current coins.');
+          return;
+        }
+
+        audio.playThud();
+        // Create transactional row logged into memory trail
+        const txnId = 'TXN_' + Math.floor(Math.random() * 1000000);
+        const request = {
+          id: txnId,
+          type: 'withdraw',
+          amount: Number(withdrawAmt),
+          status: 'pending',
+          timestamp: new Date().toISOString(),
+          username: profile.name,
+          email: 'sarveshkadam267@gmail.com',
+          destination: withdrawAddress || '@upi'
+        };
+
+        // Take from player state first
+        setProfile(prev => ({
+          ...prev,
+          coins: prev.coins - Number(withdrawAmt)
+        }));
+
+        setTransactionRequests(prev => [request, ...prev]);
+        setIsWithdrawOpen(false);
+      };
+
+      // Administrative Control Panel handlers
+      const approveTrans = (id) => {
+        audio.playCoin();
+        setTransactionRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
+      };
+
+      const rejectTrans = (id) => {
+        audio.playThud();
+        
+        // Find transaction request details
+        const req = transactionRequests.find(r => r.id === id);
+        if (req && req.status === 'pending') {
+          // REFUND to player balance
+          setProfile(prev => ({
+            ...prev,
+            coins: prev.coins + req.amount
+          }));
+        }
+
+        setTransactionRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r));
+      };
+
+      // NEW "CUT" ACTION - voids request without any refund
+      const cutTrans = (id) => {
+        audio.playThud();
+        setTransactionRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'cut' } : r));
+      };
+
+      // Infinite Coins Hacks Panel Toggle
+      const maxInfiniteCoinsHacks = () => {
+        audio.playWin();
+        setProfile(prev => ({
+          ...prev,
+          coins: 99999999999999999
+        }));
+        alert('Infinite Coins Cheat Enabled! Added 99,999,999,999,999,999 Coins to your profile.');
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col bg-brand-dark">
+
+          {/* Top Gaming Web Header */}
+          <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-white/5 py-3 px-6 z-30 flex justify-between items-center">
+            
+            {/* Logo area */}
+            <div className="flex items-center gap-3">
+              <span className="text-3xl animate-bounce">🎰</span>
+              <div>
+                <h1 className="text-white font-extrabold text-lg tracking-tight uppercase leading-none">WinZO Arcade</h1>
+                <span className="text-[10px] text-rose-500 uppercase tracking-widest font-mono font-bold">1v1 Arena Matches</span>
+              </div>
+            </div>
+
+            {/* Profile detail controls */}
+            <div className="flex items-center gap-4">
+              
+              {/* Sound Node */}
+              <button 
+                onClick={toggleSound}
+                className="text-slate-400 hover:text-white transition-colors bg-slate-800 p-2 rounded-xl border border-white/5 cursor-pointer text-sm"
+                title={soundEnabled ? 'Mute Game SFX' : 'Unmute SFX'}
+              >
+                {soundEnabled ? '🔊 Sound On' : '🔇 Muted'}
+              </button>
+
+              {/* Coins Counter Wallet block */}
+              <div className="flex items-center gap-2.5 bg-black/40 border border-white/10 px-4 py-2 rounded-2xl">
+                <span className="text-amber-400 animate-pulse text-lg">🪙</span>
+                <div>
+                  <span className="font-extrabold text-xs text-white font-mono uppercase block">Arcade Balance</span>
+                  <span className="font-mono text-amber-300 text-sm font-black truncate max-w-[150px] inline-block">
+                    {profile.coins.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Profile Details Button layout */}
+              <div className="flex items-center gap-3 bg-slate-850 p-1.5 rounded-2xl border border-white/5">
+                <span className="text-2xl">{profile.avatar}</span>
+                <div className="hidden md:block">
+                  <p className="text-white text-xs font-black leading-none">{profile.name}</p>
+                  <span className="text-[9px] text-[#22c55e] uppercase tracking-wide font-mono">LEVEL {profile.level}</span>
+                </div>
+              </div>
+
+              {/* Wallet Buttons */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { audio.playThud(); setIsDepositOpen(true); }}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3 py-2 rounded-xl active:scale-95 transition-transform cursor-pointer"
+                >
+                  📥 Deposit
+                </button>
+                <button 
+                  onClick={() => { audio.playThud(); setIsWithdrawOpen(true); }}
+                  className="bg-rose-500 hover:bg-rose-400 text-white font-black text-xs px-3 py-2 rounded-xl active:scale-95 transition-transform cursor-pointer border border-rose-400/20"
+                >
+                  📤 Cash Out
+                </button>
+              </div>
+
+            </div>
+          </header>
+
+          {/* Quick Hacks Bar for Sarvesh */}
+          <div className="bg-slate-950 border-b border-rose-500/20 py-2 px-6 flex justify-between items-center text-xs">
+            <span className="text-slate-400">⚡ Developer Sandbox & Administrator Console Active</span>
+            <div className="flex gap-2">
+              <button 
+                onClick={maxInfiniteCoinsHacks}
+                className="bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 border border-rose-500/20 font-black px-2.5 py-1 rounded-lg cursor-pointer transition-colors"
+              >
+                🪙 Enable Infinite Coins Hack
+              </button>
+              <button 
+                onClick={() => { audio.playThud(); scrollBy({ top: 1200, behavior: 'smooth' }); }}
+                className="bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 font-black px-2.5 py-1 rounded-lg cursor-pointer transition-colors animate-pulse"
+              >
+                🛠️ Admin Verification Trail
+              </button>
+            </div>
+          </div>
+
+          {/* Content views routing render container */}
+          <main className="flex-grow p-6 max-w-7xl mx-auto w-full">
+            
+            {currentView === 'spin-wheel' && (
+              <SpinWheel 
+                onWin={handleSpinWheelWin}
+                onClose={() => setCurrentView('lobby')}
+                lastDailySpin={profile.lastDailySpin}
+              />
+            )}
+
+            {currentView === 'selecting-tier' && (
+              <div className="max-w-md mx-auto bg-brand-card border border-white/5 rounded-3xl p-6 shadow-2xl relative">
+                <button 
+                  onClick={() => setCurrentView('lobby')}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold"
+                >
+                  ✕ Close
+                </button>
+                <h3 className="text-lg font-black text-white text-center mb-4 uppercase tracking-tight">Select Lobby Stake Fee</h3>
+                <p className="text-slate-400 text-xs text-center mb-6">Select appropriate stakes, pay entry cost, and lock matched pool credits!</p>
+
+                <div className="space-y-3">
+                  {CHALLENGE_TIERS.map(t => {
+                    return (
+                      <div 
+                        key={t.id}
+                        onClick={() => selectTier(t)}
+                        className="bg-black/40 hover:bg-rose-950/20 border border-white/5 hover:border-rose-500/30 p-4 rounded-2xl cursor-pointer flex justify-between items-center transition-all group"
+                      >
+                        <div>
+                          <span className="font-bold text-sm text-white group-hover:text-rose-400 block transition-colors">{t.label}</span>
+                          <span className="text-[10px] text-slate-500 uppercase font-mono">1v1 matched rival</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-[#facc15] font-mono block">Entry: 🪙{t.fee}</span>
+                          <span className="text-[10px] text-green-400 font-mono">Pool: 🪙{t.pool}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {currentView === 'matchmaking' && (
+              <Matchmaking 
+                gameId={activeGameId}
+                tier={selectedTier}
+                opponent={activeMatchOpponent}
+                onCancel={() => setCurrentView('lobby')}
+                onStartGame={() => setCurrentView('playing')}
+              />
+            )}
+
+            {currentView === 'playing' && (
+              <div>
+                {activeGameId === 'card-duel' && (
+                  <CardDuel 
+                    opponentName={activeMatchOpponent.name}
+                    opponentAvatar={activeMatchOpponent.avatar}
+                    entryFee={selectedTier.fee}
+                    prizePool={selectedTier.pool}
+                    onGameOver={handleGameFinished}
+                  />
+                )}
+                
+                {activeGameId === 'ludo' && (
+                  <Ludo 
+                    opponentName={activeMatchOpponent.name}
+                    opponentAvatar={activeMatchOpponent.avatar}
+                    entryFee={selectedTier.fee}
+                    prizePool={selectedTier.pool}
+                    onGameOver={handleGameFinished}
+                  />
+                )}
+
+                {activeGameId === 'rummy' && (
+                  <SpeedRummy 
+                    opponentName={activeMatchOpponent.name}
+                    opponentAvatar={activeMatchOpponent.avatar}
+                    entryFee={selectedTier.fee}
+                    prizePool={selectedTier.pool}
+                    onGameOver={handleGameFinished}
+                  />
+                )}
+              </div>
+            )}
+
+            {currentView === 'lobby' && (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+                {/* Left side column: Main game catalogues */}
+                <div className="lg:col-span-3 space-y-6">
+                  
+                  {/* Promo slider ban */}
+                  <div className="bg-gradient-to-r from-red-650 via-rose-700 to-red-950 p-6 rounded-3xl border border-red-500/20 text-white relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="relative z-10 text-center md:text-left space-y-2 max-w-md">
+                      <span className="bg-yellow-400 text-slate-950 font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-md leading-none font-mono">
+                        LIMITED TIME BONUS
+                      </span>
+                      <h2 className="text-2xl font-black tracking-tight leading-none uppercase">MEGA TOURNAMENTS LIVE</h2>
+                      <p className="text-xs text-rose-100 font-medium">Challenge random players speed matches to grab real cash payouts instantly! Enter with mini gold coins!</p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => selectGame('spin-wheel')}
+                      className="bg-yellow-400 hover:bg-yellow-350 text-slate-950 font-black font-mono tracking-tight text-xs px-6 py-3 rounded-xl cursor-pointer glow-gold active:scale-95 transition-transform"
+                    >
+                      🎪 Daily Fortune Spin
+                    </button>
+                  </div>
+
+                  {/* Games catalogs list */}
+                  <div>
+                    <h3 className="text-white font-black uppercase text-sm font-mono tracking-wider mb-4">
+                      🕹️ AVAILABLE MATCHROOM LOBBIES
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {GAME_CATALOG.map(g => {
+                        return (
+                          <div 
+                            key={g.id}
+                            className={`bg-gradient-to-br ${g.bgGradient} p-5 rounded-2xl border flex flex-col justify-between hover:scale-[1.01] transition-transform relative overflow-hidden group min-h-[170px]`}
+                          >
+                            <div className="flex gap-4">
+                              <span className="text-4xl bg-black/20 p-2.5 rounded-xl block shrink-0">{g.avatar}</span>
+                              <div>
+                                <h4 className="text-white text-base font-black tracking-tight leading-none uppercase">{g.title}</h4>
+                                <span className="text-[9px] text-[#a7f3d0] uppercase tracking-wide font-mono mt-1 inline-block">● {g.activePlayers} ONLINE</span>
+                                <p className="text-slate-350 text-xs mt-1.5 font-medium leading-normal">{g.desc}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex justify-between items-center">
+                              <span className="text-[10px] text-slate-400 font-mono">STAKES SYSTEM MATCH</span>
+                              <button 
+                                onClick={() => selectGame(g.id)}
+                                className="bg-slate-900 border border-white/10 hover:bg-slate-950 text-white font-black text-xs px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                              >
+                                Play Lobby 🚀
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right side column: Daily Quests & Leaderboard */}
+                <div className="space-y-6">
+                  
+                  {/* Daily Quests Board */}
+                  <div className="bg-brand-card border border-white/5 p-5 rounded-2xl shadow-xl">
+                    <h3 className="text-white text-sm font-black font-mono uppercase tracking-wider mb-3">DAILY CHALLENGE QUESTS</h3>
+                    <div className="space-y-3">
+                      {quests.map(q => {
+                        return (
+                          <div key={q.id} className="bg-black/30 p-3 rounded-xl border border-white/5 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <h4 className="text-white text-xs font-bold leading-tight font-sans text-stone-200">{q.title}</h4>
+                              <span className="text-[9px] text-amber-400 font-mono font-bold shrink-0">🪙+{q.reward}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-normal">{q.description}</p>
+                            
+                            {/* Loading progress */}
+                            <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                              <span>Progress: {q.progress}/{q.target}</span>
+                              <span>{Math.round((q.progress / q.target) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                              <div className="bg-rose-500 h-full" style={{ width: `${(q.progress/q.target)*100}%` }}></div>
+                            </div>
+
+                            {q.completed ? (
+                              q.claimed ? (
+                                <span className="block text-center text-[9px] font-bold uppercase py-1 text-slate-500 font-mono">CLAIMED ✔️</span>
+                              ) : (
+                                <button 
+                                  onClick={() => claimQuestReward(q.id, q.reward)}
+                                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[9px] py-1.5 rounded-lg active:scale-95 transition-transform uppercase font-mono tracking-widest cursor-pointer"
+                                >
+                                  Claim Loot Box Reward
+                                </button>
+                              )
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Leaderboard Rankings */}
+                  <div className="bg-brand-card border border-white/5 p-5 rounded-2xl shadow-xl">
+                    <h3 className="text-white text-sm font-black font-mono uppercase tracking-wider mb-3">🏅 MASTER LEADERBOARDS</h3>
+                    <div className="space-y-2">
+                      {leaderboard.map((entry, idx) => {
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`flex justify-between items-center p-2 rounded-xl transition-all ${
+                              entry.isUser ? 'bg-rose-650/25 border border-rose-500/30' : 'bg-black/15'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-sans font-black text-slate-400 w-3 text-center">{idx + 1}</span>
+                              <span className="text-lg">{entry.avatar}</span>
+                              <div>
+                                <span className="font-bold text-xs text-white block truncate max-w-[100px]">{entry.name}</span>
+                                <span className="text-[8px] text-slate-505 uppercase tracking-wide font-mono block">Level {entry.level}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-mono text-xs font-black text-amber-300 block truncate max-w-[120px]">
+                                {entry.coins.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* Historic Transactions List and Admin Verification Panel Console */}
+            <div className="mt-8 bg-brand-card border border-white/5 p-6 rounded-3xl glow-brand">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4 mb-6">
+                <div>
+                  <h3 className="text-white font-extrabold text-base tracking-tight uppercase leading-none">
+                    🛠️ Administrative Review Console
+                  </h3>
+                  <p className="text-slate-400 text-xs mt-1 font-medium">Verify pending player cashouts/deposits. Test real-world approvals, refund voids, and no-refund cuts.</p>
+                </div>
+                <div className="flex gap-2.5">
+                  <span className="bg-white/5 border border-white/10 text-white font-mono text-[10px] uppercase font-black px-3 py-1.5 rounded-lg">
+                    VERIFIED CLOUD DB
+                  </span>
+                  <span className="bg-rose-500/10 border border-rose-500/20 text-rose-500 font-mono text-[10px] uppercase font-black px-3 py-1.5 rounded-lg">
+                    SANDBOX ENABLED
+                  </span>
+                </div>
+              </div>
+
+              {/* Transactions Requests List */}
+              <div className="space-y-3 mb-6">
+                <h4 className="text-slate-350 text-xs font-black font-mono uppercase tracking-widest">
+                  PENDING REVIEW TRAIL
+                </h4>
+                
+                {transactionRequests.filter(r => r.status === 'pending').length === 0 ? (
+                  <p className="text-xs text-slate-500 italic p-4 bg-black/10 rounded-xl border border-white/5 text-center">
+                    No pending player requests under review. Trigger a "Cash Out" from the top wallet buttons to generate a reviewable request!
+                  </p>
+                ) : null}
+
+                {transactionRequests.filter(r => r.status === 'pending').map(req => {
+                  return (
+                    <div 
+                      key={req.id} 
+                      className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-black/40 border border-white/10 rounded-2xl gap-4 hover:border-rose-500/20 transition-all text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded uppercase leading-none font-mono">
+                            PENDING TRIAL
+                          </span>
+                          <span className="text-slate-400 font-mono text-[10px]">{req.id}</span>
+                        </div>
+                        <p className="text-white font-bold font-sans">
+                          Player: <span className="text-rose-400 font-extrabold">{req.username}</span> 
+                          ({req.email}) wants to withdraw <span className="text-[#facc15] font-black">🪙{req.amount.toLocaleString()}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-mono">
+                          Destination Address: {req.destination} | Platform: {req.platform}
+                        </p>
+                      </div>
+
+                      {/* Admin Decision Actions */}
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <button 
+                          onClick={() => approveTrans(req.id)}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[10px] px-3 py-1.5 rounded-lg active:scale-95 transition-transform uppercase cursor-pointer"
+                        >
+                          ✓ Approve & Disburse
+                        </button>
+                        
+                        <button 
+                          onClick={() => rejectTrans(req.id)}
+                          className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] px-3 py-1.5 rounded-lg active:scale-95 transition-transform uppercase cursor-pointer flex flex-col items-center leading-none justify-center"
+                          title="Reject and REFUND player gold cash back"
+                        >
+                          <span>✕ Reject & Refund</span>
+                        </button>
+
+                        <button 
+                          onClick={() => cutTrans(req.id)}
+                          className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-1.5 rounded-lg active:scale-95 transition-transform uppercase cursor-pointer flex flex-col items-center leading-none justify-center"
+                          title="Void / Cut request completely without refunding"
+                        >
+                          <span>✂️ CUT REQUEST</span>
+                          <span className="text-[7px] text-amber-950 font-bold mt-0.5 font-mono">(VOID / NO REFUND)</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Verified Ledger */}
+              <div>
+                <h4 className="text-slate-350 text-xs font-black font-mono uppercase tracking-widest mb-3">
+                  RESOLVED VERIFICATION LEDGER
+                </h4>
+                
+                {transactionRequests.filter(r => r.status !== 'pending').length === 0 ? (
+                  <p className="text-xs text-slate-500 italic p-4 bg-black/10 rounded-xl border border-white/5 text-center">
+                    Ledger logs are empty. Approve or Cut / Void pending transactions to write audit logs.
+                  </p>
+                ) : null}
+
+                <div className="space-y-2">
+                  {transactionRequests.filter(r => r.status !== 'pending').map(req => {
+                    const pillStatus = 
+                      req.status === 'approved' ? { text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'APPROVED & DISBURSED' } :
+                      req.status === 'cut' ? { text: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20', label: 'VOIDED / CUT BY ADMIN (NO REFUND)' } :
+                      { text: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20', label: 'REJECTED & REFUNDED' };
+
+                    return (
+                      <div 
+                        key={req.id} 
+                        className="flex flex-col md:flex-row justify-between items-start md:items-center p-3.5 bg-black/20 border border-white/5 rounded-xl gap-4 text-[11px]"
+                      >
+                        <div className="space-y-1">
+                          <span className="text-slate-500 font-mono text-[9px] block">AUDIT ID: {req.id}</span>
+                          <p className="text-slate-300 font-medium">
+                            Withdraw request of <span className="text-yellow-400 font-mono font-bold">🪙{req.amount}</span> by player {req.username} ({req.email})
+                          </p>
+                        </div>
+                        <div className={`px-3 py-1 rounded-lg border text-[9px] font-black tracking-wider uppercase font-mono ${pillStatus.bg} ${pillStatus.text}`}>
+                          {pillStatus.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+          </main>
+
+          {/* Dialog: Deposit Modal */}
+          {isDepositOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-brand-card border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center">
+                <h3 className="text-xl font-black text-emerald-400 mb-2">📥 SIMULATE COINS DEPOSIT</h3>
+                <p className="text-slate-400 text-xs mb-6">Convert sandbox test money to mock gold points instantly.</p>
+
+                <div className="space-y-4 mb-6 text-left">
+                  <label className="text-[10px] text-slate-500 uppercase tracking-widest font-mono font-bold block mb-1">Select Amount (Gold Coins)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[100, 1000, 10000].map(val => (
+                      <button 
+                        key={val}
+                        onClick={() => { audio.playThud(); setDepositAmt(val); }}
+                        className={`py-2 px-1 text-xs font-mono font-bold rounded-lg border cursor-pointer ${
+                          depositAmt === val 
+                            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' 
+                            : 'bg-slate-800 border-white/5 hover:border-slate-500 text-white'
+                        }`}
+                      >
+                        +{val} Coins
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsDepositOpen(false)}
+                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex-1 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={processDeposit}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs py-2.5 px-4 rounded-xl flex-1 cursor-pointer shadow-lg glow-green"
+                  >
+                    Confirm Deposit
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dialog: Withdraw Cash Out Modal */}
+          {isWithdrawOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-brand-card border border-white/10 p-6 rounded-3xl max-w-sm w-full text-center">
+                <h3 className="text-xl font-black text-rose-500 mb-2">📤 SIMULATE CASH OUT</h3>
+                <p className="text-slate-400 text-xs mb-6">Create a transfer request for admin review and disbursement.</p>
+
+                <div className="space-y-4 mb-6 text-left">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-widest font-mono font-bold block mb-1">Cash Out Method</label>
+                    <select 
+                      value={withdrawPlatform} 
+                      onChange={(e) => setWithdrawPlatform(e.target.value)}
+                      className="w-full bg-slate-800 border border-white/5 rounded-xl p-2 text-xs text-white"
+                    >
+                      <option value="upi">UPI Address Transfer</option>
+                      <option value="gpay">Google Pay UPI</option>
+                      <option value="phonepe">PhonePe UPI</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-widest font-mono font-bold block mb-1">Destination Address</label>
+                    <input 
+                      type="text" 
+                      value={withdrawAddress} 
+                      onChange={(e) => setWithdrawAddress(e.target.value)}
+                      placeholder="e.g. sarveshkadam@okaxis" 
+                      className="w-full bg-slate-800 border border-white/5 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-widest font-mono font-bold block mb-1">Gold Coins (Min 50)</label>
+                    <input 
+                      type="number" 
+                      value={withdrawAmt} 
+                      onChange={(e) => setWithdrawAmt(Number(e.target.value))}
+                      className="w-full bg-slate-800 border border-white/5 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none focus:border-rose-500"
+                    />
+                    <span className="text-[9px] text-slate-400 mt-1 block">Maximum withdrawable: {profile.coins.toLocaleString()} Coins</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsWithdrawOpen(false)}
+                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex-1 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={submitWithdrawRequest}
+                    className="bg-rose-500 hover:bg-rose-400 text-white font-black text-xs py-2.5 px-4 rounded-xl flex-1 cursor-pointer shadow-lg glow-brand"
+                  >
+                    Create request
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer Area */}
+          <footer className="bg-slate-950 py-6 border-t border-white/5 text-center text-xs text-slate-500">
+            <p className="uppercase tracking-widest font-mono font-bold text-[10px] text-slate-400">WINZO ARCADE STANDALONE</p>
+            <p className="mt-1">© 2026 WinZO Sandbox. Proudly crafted for Sarvesh Kadam.</p>
+          </footer>
+
+        </div>
+      );
+    }
+
+    // Render the React application inside mounting root
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
